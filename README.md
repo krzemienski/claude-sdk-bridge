@@ -198,6 +198,25 @@ This repo is the companion code for **Part 2** of the Agentic Development series
 9. [Stitch: From Design to Code in One Prompt](https://github.com/krzemienski/agentic-dev-guide/tree/main/09-stitch-design-to-code)
 10. [Building an AI Development Operating System](https://github.com/krzemienski/agentic-dev-guide/tree/main/10-ai-dev-operating-system)
 
+## Troubleshooting
+
+### `pip install -e .` fails with build backend error
+Ensure your `pyproject.toml` uses `setuptools.build_meta` as the build backend:
+```toml
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+```
+
+### `ModuleNotFoundError: claude_agent_sdk`
+Install the Claude Agent SDK: `pip install claude-agent-sdk`. The bridge uses lazy imports — it loads without the SDK but fails at runtime.
+
+### NDJSON lines arriving out of order
+The bridge processes stdout line-by-line. Ensure each JSON event is a single line (no pretty-printing) and ends with `\n`.
+
+### Environment variable conflicts
+When running inside a Claude Code session, the CLI's nesting detection blocks execution. Strip `CLAUDECODE` and `CLAUDE_CODE_*` vars from the subprocess environment.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
