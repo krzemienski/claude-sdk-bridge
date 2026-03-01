@@ -1,0 +1,14 @@
+flowchart TD
+    L1["Layer 1: SwiftUI\nHTTP / SSE"]
+    B1[/"Boundary 1: SSE text/event-stream"/]
+    L2["Layer 2: Vapor Backend\nProcess + GCD"]
+    B2[/"Boundary 2: stdout pipe"/]
+    L3["Layer 3: Python Bridge\nNDJSON on stdout"]
+    B3[/"Boundary 3: NDJSON newline-delimited"/]
+    L4["Layer 4: Claude CLI\nSDK async iterator"]
+    B4[/"Boundary 4: SDK async stream"/]
+    L5["Layer 5: Anthropic API\nOAuth HTTP"]
+    B5[/"Boundary 5: JSON over HTTPS"/]
+    L5AUTH[/"Boundary 6: OAuth token refresh"/]
+
+    L1 --> B1 --> L2 --> B2 --> L3 --> B3 --> L4 --> B4 --> L5 --> B5 --> L5AUTH

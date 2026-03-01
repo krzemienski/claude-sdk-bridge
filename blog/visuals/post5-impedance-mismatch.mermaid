@@ -1,0 +1,18 @@
+flowchart LR
+    subgraph RunLoop["RunLoop Thread"]
+        FH["FileHandle.readabilityHandler"]
+        PS["PassthroughSubject.send()"]
+        SUB["Combine Subscriber"]
+        FH --> PS --> SUB
+    end
+
+    subgraph NIOLoop["NIO EventLoop Thread"]
+        REQ["Incoming HTTP Request"]
+        HAND["Route Handler"]
+        RESP["HTTP Response"]
+        REQ --> HAND --> RESP
+    end
+
+    PS -.->|"Never crosses"| HAND
+
+    note1["The Impedance Mismatch\nRunLoop publishes but NIO never pumps it"]
