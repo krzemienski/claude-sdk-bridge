@@ -36,4 +36,4 @@ Repository = "https://github.com/krzemienski/claude-sdk-bridge"
 Issues = "https://github.com/krzemienski/claude-sdk-bridge/issues"
 
 [tool.setuptools]
-py-modules = ["bridge"]
+py-modules = ["claude_bridge"]
