@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-bridge"
+version = "1.0.0"
+description = "Production Python bridge for connecting native apps to Claude Code via NDJSON streaming"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Nick Krzemienski"}
+]
+keywords = ["claude", "anthropic", "bridge", "streaming", "ndjson"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "claude-agent-sdk>=0.1.0",
+]
+
+[project.scripts]
+claude-bridge = "claude_bridge:main"
+
+[project.urls]
+Homepage = "https://github.com/krzemienski/claude-sdk-bridge"
+Repository = "https://github.com/krzemienski/claude-sdk-bridge"
+Issues = "https://github.com/krzemienski/claude-sdk-bridge/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-dir]
+claude_bridge = "."
+
+[tool.setuptools.py-modules]
+claude_bridge = "bridge"
