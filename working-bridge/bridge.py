@@ -26,6 +26,15 @@ Critical: flush=True
     then a burst of text, then nothing again. Every sys.stdout.write()
     must be followed by sys.stdout.flush().
 
+SDK Compliance (CRITICAL REQUIREMENT #2):
+    Message and block type checking MUST use isinstance(), NOT getattr() or .type.
+    See: https://docs.anthropic.com/claude-agent-sdk
+
+NOTE: When using ClaudeAgentOptions, you MUST set setting_sources
+to load plugins, skills, and CLAUDE.md from the filesystem:
+    options = ClaudeAgentOptions(setting_sources=["user", "project"])
+Without this, plugins=[], skills=[], commands=[] (nothing loads).
+
 Usage:
     # Direct execution
     python3 bridge.py '{"prompt": "What is 2+2?", "options": {"model": "sonnet"}}'
@@ -40,6 +49,14 @@ import sys
 import json
 import asyncio
 from typing import AsyncIterator
+
+# SDK message and block type imports — required for isinstance() checks.
+# Imported at module level per official SDK compliance requirements.
+from claude_agent_sdk import (
+    query, ClaudeAgentOptions,
+    AssistantMessage, UserMessage, SystemMessage, ResultMessage,
+    TextBlock, ThinkingBlock, ToolUseBlock, ToolResultBlock,
+)
 
 
 # Protocol-level events that don't contain user-facing content.
@@ -67,39 +84,27 @@ def convert_block(block) -> dict:
     """Convert an SDK content block to a serializable dict.
 
     Handles TextBlock, ToolUseBlock, ToolResultBlock, ThinkingBlock
-    with fallback to class name inspection for SDK version compatibility.
+    using isinstance() checks per official SDK compliance requirements.
     """
-    block_type = getattr(block, "type", None)
-
-    if block_type is None:
-        name = type(block).__name__.lower()
-        if "text" in name and "tool" not in name:
-            block_type = "text"
-        elif "thinking" in name:
-            block_type = "thinking"
-        elif "tooluse" in name or "tool_use" in name:
-            block_type = "tool_use"
-        elif "toolresult" in name or "tool_result" in name:
-            block_type = "tool_result"
-
-    if block_type == "text":
-        return {"type": "text", "text": getattr(block, "text", str(block))}
-    elif block_type == "tool_use":
+    # SDK compliance: use isinstance(), NOT getattr(block, "type", ...) or block.type
+    if isinstance(block, TextBlock):
+        return {"type": "text", "text": block.text}
+    elif isinstance(block, ToolUseBlock):
         return {
             "type": "tool_use",
-            "id": getattr(block, "id", ""),
-            "name": getattr(block, "name", ""),
-            "input": getattr(block, "input", {}),
+            "id": block.id,
+            "name": block.name,
+            "input": block.input,
         }
-    elif block_type == "tool_result":
+    elif isinstance(block, ToolResultBlock):
         return {
             "type": "tool_result",
-            "tool_use_id": getattr(block, "tool_use_id", ""),
-            "content": getattr(block, "content", ""),
-            "is_error": getattr(block, "is_error", False),
+            "tool_use_id": block.tool_use_id,
+            "content": block.content,
+            "is_error": block.is_error,
         }
-    elif block_type == "thinking":
-        return {"type": "thinking", "thinking": getattr(block, "thinking", "")}
+    elif isinstance(block, ThinkingBlock):
+        return {"type": "thinking", "thinking": block.thinking}
     else:
         text = getattr(block, "text", None) or str(block)
         return {"type": "text", "text": text}
@@ -116,17 +121,14 @@ async def stream_response(prompt: str, **kwargs) -> AsyncIterator[dict]:
     Yields:
         dict: NDJSON-compatible event dicts with 'type' field.
     """
-    from claude_agent_sdk import query, ClaudeAgentOptions
-
     options = ClaudeAgentOptions(**kwargs) if kwargs else ClaudeAgentOptions()
 
     async for message in query(prompt=prompt, options=options):
-        msg_type = getattr(message, "type", type(message).__name__).lower()
+        # SDK compliance: use isinstance(), NOT getattr(message, "type", ...) or message.type
+        if isinstance(message, SystemMessage):
+            pass
 
-        if msg_type in SKIP_EVENTS:
-            continue
-
-        if "assistant" in msg_type and hasattr(message, "content"):
+        elif isinstance(message, AssistantMessage):
             blocks = [convert_block(b) for b in message.content]
             yield {
                 "type": "assistant",
@@ -134,14 +136,14 @@ async def stream_response(prompt: str, **kwargs) -> AsyncIterator[dict]:
                 "model": getattr(message, "model", None),
             }
 
-        elif "result" in msg_type:
+        elif isinstance(message, ResultMessage):
             result = {
                 "type": "result",
-                "is_error": getattr(message, "is_error", False),
-                "session_id": getattr(message, "session_id", ""),
-                "total_cost_usd": getattr(message, "total_cost_usd", 0.0) or 0.0,
+                "is_error": message.is_error,
+                "session_id": message.session_id,
+                "total_cost_usd": message.total_cost_usd or 0.0,
             }
-            if hasattr(message, "usage") and message.usage:
+            if message.usage:
                 u = message.usage
                 result["usage"] = {
                     "input_tokens": getattr(u, "input_tokens", 0),
@@ -149,11 +151,12 @@ async def stream_response(prompt: str, **kwargs) -> AsyncIterator[dict]:
                 }
             yield result
 
+        elif isinstance(message, UserMessage):
+            pass  # UserMessage not emitted in stream_response
+
 
 async def run_bridge(config: dict) -> None:
     """Run the bridge in NDJSON-to-stdout mode for Swift Process consumption."""
-    from claude_agent_sdk import query, ClaudeAgentOptions
-
     prompt = config.get("prompt", "")
     opts = config.get("options", {})
 
@@ -168,27 +171,26 @@ async def run_bridge(config: dict) -> None:
 
     try:
         async for message in query(prompt=prompt, options=options):
-            msg_type = getattr(message, "type", type(message).__name__).lower()
+            # SDK compliance: use isinstance(), NOT getattr(message, "type", ...) or message.type
+            if isinstance(message, SystemMessage):
+                pass
 
-            if msg_type in SKIP_EVENTS:
-                continue
-
-            if "assistant" in msg_type:
-                blocks = [convert_block(b) for b in (message.content if hasattr(message, "content") else [])]
+            elif isinstance(message, AssistantMessage):
+                blocks = [convert_block(b) for b in message.content]
                 if blocks:
                     got_content = True
                 emit({"type": "assistant", "message": {"role": "assistant", "content": blocks, "model": getattr(message, "model", None)}})
 
-            elif "result" in msg_type:
+            elif isinstance(message, ResultMessage):
                 got_result = True
                 result = {
                     "type": "result",
-                    "subtype": "error" if getattr(message, "is_error", False) else "success",
-                    "is_error": getattr(message, "is_error", False),
-                    "session_id": getattr(message, "session_id", session_id),
-                    "total_cost_usd": getattr(message, "total_cost_usd", 0.0) or 0.0,
+                    "subtype": "error" if message.is_error else "success",
+                    "is_error": message.is_error,
+                    "session_id": message.session_id or session_id,
+                    "total_cost_usd": message.total_cost_usd or 0.0,
                 }
-                if hasattr(message, "usage") and message.usage:
+                if message.usage:
                     u = message.usage
                     result["usage"] = {
                         "input_tokens": getattr(u, "input_tokens", 0),
@@ -198,8 +200,8 @@ async def run_bridge(config: dict) -> None:
                     }
                 emit(result)
 
-            elif "user" in msg_type:
-                blocks = [convert_block(b) for b in (message.content if hasattr(message, "content") else [])]
+            elif isinstance(message, UserMessage):
+                blocks = [convert_block(b) for b in message.content]
                 emit({"type": "user", "message": {"role": "user", "content": blocks}})
 
     except Exception as e:
