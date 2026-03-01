@@ -1,0 +1,38 @@
+graph TD
+    subgraph attempt1["Attempt 1: Direct API — Day 0.5"]
+        A1["Import anthropic SDK"] --> A2["AuthenticationError"]
+        A2 --> A3["Claude Code uses OAuth<br/>not ANTHROPIC_API_KEY"]
+    end
+
+    subgraph attempt2["Attempt 2: ClaudeCodeSDK in Vapor — Day 1-2.5"]
+        B1["Integrate ClaudeCodeSDK"] --> B2["Zero error messages"]
+        B2 --> B3["AsyncStream never yields"]
+        B3 --> B4["RunLoop vs NIO<br/>impedance mismatch"]
+        B4 --> B5["Three workarounds<br/>all deadlock"]
+    end
+
+    subgraph attempt3["Attempt 3: JavaScript SDK — Day 2.5-3"]
+        C1["Add Node.js runtime"] --> C2["Same AuthenticationError"]
+        C2 --> C3["OAuth wall identical<br/>to Attempt 1"]
+    end
+
+    subgraph attempt4["Attempt 4: CLI Subprocess — Day 3-4.5"]
+        D1["Spawn claude CLI"] --> D2["Works in terminal"]
+        D2 --> D3["Silent failure in<br/>Claude Code session"]
+        D3 --> D4["CLAUDECODE=1<br/>nesting detection"]
+        D4 --> D5["Three-line env<br/>var fix"]
+        D5 --> D6["SUCCESS"]
+    end
+
+    attempt1 --> attempt2
+    attempt2 --> attempt3
+    attempt3 --> attempt4
+
+    style attempt1 fill:#1e293b,stroke:#ef4444,color:#e2e8f0
+    style attempt2 fill:#1e293b,stroke:#ef4444,color:#e2e8f0
+    style attempt3 fill:#1e293b,stroke:#ef4444,color:#e2e8f0
+    style attempt4 fill:#1e293b,stroke:#059669,color:#e2e8f0
+    style A3 fill:#ef4444,stroke:#f87171,color:#fff
+    style B5 fill:#ef4444,stroke:#f87171,color:#fff
+    style C3 fill:#ef4444,stroke:#f87171,color:#fff
+    style D6 fill:#059669,stroke:#34d399,color:#fff

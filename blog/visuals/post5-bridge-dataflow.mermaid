@@ -1,0 +1,44 @@
+flowchart TD
+    subgraph iOS["Layer 1: iOS App (SwiftUI)"]
+        TAP["User taps Send"]
+        REQ["URLSession POST /api/v1/chat/stream"]
+        SSE["SSEClient parses text/event-stream"]
+        TAP --> REQ --> SSE
+    end
+
+    subgraph Vapor["Layer 2: Vapor Backend (Swift/NIO)"]
+        ROUTE["Route handler receives Request"]
+        ENV["Strip CLAUDECODE + CLAUDE_CODE_* env vars"]
+        SPAWN["Process() spawns /bin/zsh -l -c"]
+        GCD["GCD DispatchQueue reads stdout pipe"]
+        NDJSON_PARSE["NDJSON line parser: JSON bytes to [String: Any]"]
+        ROUTE --> ENV --> SPAWN --> GCD --> NDJSON_PARSE
+    end
+
+    subgraph Python["Layer 3: Python Bridge (claude_bridge.py)"]
+        ARGV["json.loads(sys.argv[1]) config"]
+        SDK_CALL["query(prompt=prompt, options=options)"]
+        ISINSTANCE["isinstance() dispatch: AssistantMessage, ResultMessage, ..."]
+        CONVERT["convert_block(): TextBlock, ToolUseBlock, ThinkingBlock"]
+        EMIT["json.dumps() + sys.stdout.write() + sys.stdout.flush()"]
+        ARGV --> SDK_CALL --> ISINSTANCE --> CONVERT --> EMIT
+    end
+
+    subgraph CLI["Layer 4: Claude CLI"]
+        OAUTH["Load OAuth tokens from ~/.claude/"]
+        STREAM["--output-format stream-json"]
+        OAUTH --> STREAM
+    end
+
+    subgraph API["Layer 5: Anthropic API"]
+        HTTPS["HTTPS POST /v1/messages"]
+        TOKENS["Token generation + streaming response"]
+        HTTPS --> TOKENS
+    end
+
+    SSE -->|"Boundary 1: HTTP SSE\nContent-Type: text/event-stream"| ROUTE
+    NDJSON_PARSE -->|"Boundary 2: stdout pipe\nNDJSON newline-delimited bytes"| EMIT
+    EMIT -->|"Boundary 3: NDJSON on stdout\nOne JSON object per line"| SDK_CALL
+    SDK_CALL -->|"Boundary 4: SDK async iterator\nPython objects via yield"| STREAM
+    STREAM -->|"Boundary 5: HTTPS JSON\nOAuth bearer token"| HTTPS
+    TOKENS -->|"Boundary 6: SSE chunks\nOAuth token refresh"| STREAM
