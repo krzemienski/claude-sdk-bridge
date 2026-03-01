@@ -35,11 +35,5 @@ Homepage = "https://github.com/krzemienski/claude-sdk-bridge"
 Repository = "https://github.com/krzemienski/claude-sdk-bridge"
 Issues = "https://github.com/krzemienski/claude-sdk-bridge/issues"
 
-[tool.setuptools.packages.find]
-where = ["."]
-
-[tool.setuptools.package-dir]
-claude_bridge = "."
-
-[tool.setuptools.py-modules]
-claude_bridge = "bridge"
+[tool.setuptools]
+py-modules = ["bridge"]
