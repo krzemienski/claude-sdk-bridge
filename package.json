@@ -1,0 +1,30 @@
+{
+  "name": "claude-sdk-bridge",
+  "version": "0.1.0",
+  "description": "TypeScript MCP server template: stdio dispatcher, handlers, tools catalog, and a working sign-webhook example",
+  "main": "dist/mcp-server.js",
+  "bin": {
+    "claude-sdk-bridge": "dist/mcp-server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "bash scripts/test-roundtrip.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "author": "Nick Krzemienski",
+  "homepage": "https://withagents.dev/posts/post-24-custom-mcp-servers",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krzemienski/claude-sdk-bridge.git"
+  },
+  "optionalDependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  }
+}

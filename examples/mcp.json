@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "supabase-views": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/claude-sdk-bridge/dist/mcp-server.js"
+      ],
+      "env": {
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_SERVICE_KEY": "${SUPABASE_SERVICE_KEY}",
+        "WEBHOOK_KEY_DEFAULT": "${WEBHOOK_KEY_DEFAULT}"
+      }
+    }
+  }
+}
